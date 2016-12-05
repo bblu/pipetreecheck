@@ -72,14 +72,19 @@ namespace PipeAuto
         public Vertex v2;   //branch
         public int w;
         public int i;
+        public float weight;
     };
     class PipeNet
     {
-        List<Edge>[] edges = new List<Edge>[2] { new List<Edge>(1000), new List<Edge>(1000) };
-        List<Vertex>[] vtxLists = new List<Vertex>[2] { new List<Vertex>(1000), new List<Vertex>(1000) };       
-        List<Vertex>[] subTrees = new List<Vertex>[2] { new List<Vertex>(1000), new List<Vertex>(1000) };
-
-        Vertex[] root = new Vertex[2]{null,null};
+        List<Edge>[] edges = new List<Edge>[6] { new List<Edge>(1000), new List<Edge>(1000), new List<Edge>(1000),
+            new List<Edge>(1000), new List<Edge>(1000), new List<Edge>(1000) };
+        List<Vertex>[] vtxLists = new List<Vertex>[6] { new List<Vertex>(1000), new List<Vertex>(1000), 
+            new List<Vertex>(1000), new List<Vertex>(1000), new List<Vertex>(1000), new List<Vertex>(1000) };
+        List<Vertex>[] subTrees = new List<Vertex>[6] { new List<Vertex>(1000), new List<Vertex>(1000), 
+            new List<Vertex>(1000), new List<Vertex>(1000), new List<Vertex>(1000), new List<Vertex>(1000) };
+        Dictionary<string, int> dicColorIndex;
+        Dictionary<int,string> dicIndexColor;
+        Vertex[] root = new Vertex[6] { null, null, null, null, null, null };
         StreamWriter log;
 
         //错误信息
@@ -92,8 +97,19 @@ namespace PipeAuto
             this.log = sw;
             errSnap = new List<Vertex>(10);
             errMsg = new List<string>(10);
+            dicColorIndex = new Dictionary<string, int>(6);
+            dicIndexColor = new Dictionary<int, string>(6);
         }
-
+        public string getColor(int i)
+        {
+            if (dicIndexColor.Keys.Contains(i))
+                return dicIndexColor[i];
+            return "";  
+        }
+        public int colorCount()
+        {
+            return dicColorIndex.Count;
+        }
         public List<Vertex> getErrSnap() { return errSnap; }
         public List<Vertex> getsubTree(int type) { return subTrees[type]; }
 
@@ -101,18 +117,19 @@ namespace PipeAuto
         {
             errMsg.Clear();
             errSnap.Clear();
-            subTrees[0].Clear();
-            subTrees[1].Clear();
-            edges[0].Clear();
-            edges[1].Clear();
-            vtxLists[0].Clear();
-            vtxLists[1].Clear();
+            for (int i = 0; i < colorCount(); i++)
+            {
+                subTrees[i].Clear();
+                edges[0].Clear();
+                vtxLists[0].Clear();
+            }
         }
 
         public void parserNet()
         {
-            for (int i = 0; i < 2;i++ )
+            for (int i = 0; i < dicColorIndex.Count;i++ )
             {
+                dicIndexColor.Add(i, dicColorIndex.Keys.ElementAt(i));
                 List<Vertex> branches = vtxLists[i];
                 //log.WriteLine(string.Format("brances[{0}] count={1}",i, branches.Count));
                 Queue < Vertex >  queue = new Queue<Vertex>(branches.Count);
@@ -173,12 +190,11 @@ namespace PipeAuto
         //type=0 供水，type=1 回水
         int counter = 0;
         int tmpc = 0;
-        public void appendEdge(int index, int type,float x0, float y0, float x1, float y1, int width)
+        public int appendEdge(int index, string col,float x0, float y0, float x1, float y1, int width)
         {
-            if (index == 327)
-            {
-               // log.WriteLine("139");
-            }
+            int type = getColorType(col);
+            if (type < 0)
+                return type;
             Edge e = new Edge(index, x0, y0, x1, y1, width);
             edges[type].Add(e);
             if (root[type] == null)
@@ -217,8 +233,19 @@ namespace PipeAuto
                     end.id = counter;
                     Console.WriteLine(string.Format("+info index[{0}] find pos in [{1}]",end.id-1,b.id));
                 }
-            }           
+            }
+            return type;
+        }
 
+        private int getColorType(string col)
+        {
+            if (dicColorIndex.Keys.Contains(col))
+                return dicColorIndex[col];
+
+            dicColorIndex.Add(col, dicColorIndex.Count);
+            if (dicColorIndex.Count > 6)
+                return -1;
+            return dicColorIndex[col];
         }
         Vertex findInList(List<Vertex> list,int i, float x, float y)
         {
@@ -246,12 +273,13 @@ namespace PipeAuto
                 float dis = node.pos.xydis(x, y);
                 if(dis<0.001)
                     return node;
-                else if (dis < 0.3)
+                else if (dis < 0.05)
                 {
                     Vertex v = new Vertex(null, x, y);
                     v.id = i;
+                    v.weight = dis;
                     errSnap.Add(v);
-                    log.WriteLine(string.Format("*erro: 第[{0:000}]行-未捕捉点->[53{1},464{2}]", i/2, x,y));
+                    log.WriteLine(string.Format("*erro: 第[{0:000}]行-未捕捉点->[53{1},464{2}] {3}", i/2, x,y,dis));
                     return node;
                 }
             }

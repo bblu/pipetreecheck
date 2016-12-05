@@ -17,7 +17,6 @@ namespace PipeAuto
         DataTable mydt = new DataTable("pipe");
         Util util = new Util();
         PipeNet net = null;
-        string[] color={"",""};
         StreamWriter log;
         public FormMain()
         {
@@ -54,8 +53,6 @@ namespace PipeAuto
             //mydt.Columns
             int counter=0;
             int c=0;
-            color[0] = mydt.Rows[0]["颜色"].ToString();
-            color[1] = "";
             foreach (DataRow row in mydt.Rows)
             {
                 counter++;
@@ -75,11 +72,12 @@ namespace PipeAuto
                 }
                 int w = 0;
                 int.TryParse(row["管径"].ToString().Trim(), out w);
-                int gshs = (row["颜色"].ToString() == color[0]) ? 0 : 1;                
-                net.appendEdge(counter, gshs, x1, y1, x2, y2, w);
-
-                if (gshs == 1 && color[1].Length == 0)
-                    color[1] = row["颜色"].ToString();
+                string gshs = row["颜色"].ToString().Trim();
+                if (net.appendEdge(counter, gshs, x1, y1, x2, y2, w) < 0)
+                {
+                    txtBox.AppendText("*erro: 同一次处理的管线颜色不能超过六种\n");
+                    break;
+                }
             }
             net.parserNet();
             foreach(Vertex v in net.getErrSnap())
@@ -88,9 +86,9 @@ namespace PipeAuto
             }
             txtBox.AppendText("======================================================\n");
             txtBox.AppendText("+info: 供水回水出站管线未接上级网属于正常现象无需修改\n");             
-            for (int i = 0; i < 2; i++)
+            for (int i = 0; i < net.colorCount(); i++)
             {
-                txtBox.AppendText(string.Format("颜色[{0}]管线-共[{1}]条未接入:\n", color[i],net.getsubTree(i).Count));
+                txtBox.AppendText(string.Format("颜色[{0}]管线-共[{1}]条未接入:\n", net.getColor(i),net.getsubTree(i).Count));
                 foreach (Vertex v in net.getsubTree(i))
                 {
                     txtBox.AppendText(string.Format("*erro: 第[{0:0000}]行-[53{1},464{2}]->未接入网\n", v.id / 2, v.pos.x, v.pos.y));
